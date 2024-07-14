@@ -16,17 +16,13 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-/**
- * 
- * @author Alberto Alonso Ruibal
- */
 public class ChessApp extends Panel implements SearchObserver, ActionListener {
 	private static final Logger logger = Logger.getLogger("ChessApplet");
 
 	private static final long serialVersionUID = 5653881094129134036L;
-	
+
 	private boolean userToMove;
-	
+
 	private SearchEngineThreaded engine;
 	private BoardJPanel boardPanel;
 	private SearchParameters searchParameters;
@@ -50,6 +46,8 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 
 	private boolean flip = false;
 
+	private ActionHandler actionHandler;
+
 	private void init() {
 		Config config = new Config();
 		config.setTranspositionTableSize(8); // Due to memory limits, TT is set to 8 MB
@@ -59,21 +57,21 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 		int timeDefaultIndex = 0;
 		searchParameters.setMoveTime(timeValues[timeDefaultIndex]);
 		engine.setObserver(this);
-		
+
 		pgnDialog = new PgnDialog(null);
-		
+
 		JButton button;
 		JPanel control = new JPanel();
 		control.setLayout(new GridLayout(17,1));
-		
+
 		JLabel labelGame = new JLabel("Game");
 		control.add(labelGame);
-		
+
 		button = new JButton("New Game");
 		button.setActionCommand("restart");
 		button.addActionListener(this);
 		control.add(button);
-		
+
 		button = new JButton("Undo Move");
 		button.setActionCommand("back");
 		button.addActionListener(this);
@@ -83,7 +81,7 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 		button.setActionCommand("go");
 		button.addActionListener(this);
 		control.add(button);
-		
+
 		JLabel labelEngine = new JLabel("Engine");
 		control.add(labelEngine);
 
@@ -91,7 +89,7 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 		comboOpponent.setActionCommand("opponent");
 		comboOpponent.addActionListener(this);
 		control.add(comboOpponent);
-		
+
 		comboTime = new JComboBox<>(timeString);
 		comboTime.setActionCommand("time");
 		comboTime.addActionListener(this);
@@ -101,7 +99,7 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 		comboElo.setActionCommand("elo");
 		comboElo.addActionListener(this);
 		control.add(comboElo);
-		
+
 		JLabel labelAppearance = new JLabel("Appearance");
 		control.add(labelAppearance);
 
@@ -119,10 +117,10 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 		button.setActionCommand("flip");
 		button.addActionListener(this);
 		control.add(button);
-		
+
 		JLabel labelFen = new JLabel("FEN/PGN");
 		control.add(labelFen);
-		
+
 		fenField = new JTextField();
 		fenField.setColumns(15);
 		control.add(fenField);
@@ -130,20 +128,20 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 		button.setActionCommand("fen");
 		button.addActionListener(this);
 		control.add(button);
-		
+
 		button = new JButton("View PGN");
 		button.setActionCommand("pgn");
 		button.addActionListener(this);
 		control.add(button);
-		
+
 		message = new JLabel();
 		control.add(message);
-				
+
 		boardPanel = new BoardJPanel(this);
 		JPanel global = new JPanel();
 		global.setBackground(Color.LIGHT_GRAY);
 		global.setLayout(new BorderLayout());
-		
+
 		JPanel control2 = new JPanel();
 		control2.setLayout(new FlowLayout());
 		control2.add(control);
@@ -161,21 +159,25 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 		comboPieces.setSelectedIndex(piecesDefaultIndex);
 		int boardsDefaultIndex = 0;
 		comboBoards.setSelectedIndex(boardsDefaultIndex);
+
+		actionHandler = new ActionHandler(boardPanel, engine, searchParameters, comboOpponent, comboTime,
+				comboElo, comboPieces, comboBoards, fenField, message, pgnDialog,
+				flip, userToMove, timeValues, eloValues, piecesValues, boardsValues);
 	}
-	
+
 	public void start() {
-		userToMove=true;
+		userToMove = true;
 	}
 
 	public void stop() {
 		logger.debug("Stop!");
 		engine.stop();
-		userToMove=false;
+		userToMove = false;
 	}
-	
+
 	public void destroy() {
 		logger.debug("Destroy!");
-		if (engine!= null) {
+		if (engine != null) {
 			engine.destroy();
 			engine = null;
 		}
@@ -195,62 +197,58 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 			logger.debug("move not legal");
 			update(false);
 		}
-    }
-	
+	}
+
 	private void checkUserToMove() {
 		userToMove = false;
-		
+
 		switch(comboOpponent.getSelectedIndex()) {
-		case 0:
-			if (!engine.getBoard().getTurn()) userToMove = true;
-			break;
-		case 1:
-			if (engine.getBoard().getTurn()) userToMove = true;
-			break;
-		case 2:
-			userToMove = true;
-			break;
-		case 3:
-			break;
+			case 0:
+				if (!engine.getBoard().getTurn()) userToMove = true;
+				break;
+			case 1:
+				if (engine.getBoard().getTurn()) userToMove = true;
+				break;
+			case 2:
+				userToMove = true;
+				break;
+			case 3:
+				break;
 		}
 		boardPanel.setAcceptInput(userToMove);
 		update(!userToMove);
 
 		if (!userToMove && (engine.getBoard().isEndGame() == 0)) engine.go(searchParameters);
-		System.out.println("checkUserToMove... userToMove="+userToMove);
-
+		System.out.println("checkUserToMove... userToMove=" + userToMove);
 	}
 
 	public void bestMove(int bestMove, int ponder) {
-		System.out.println("bestMove... userToMove="+userToMove);
+		System.out.println("bestMove... userToMove=" + userToMove);
 		if (userToMove) return;
 		boardPanel.unhighlight();
 		boardPanel.highlight(Move.getFromIndex(bestMove), Move.getToIndex(bestMove));
 		engine.getBoard().doMove(bestMove);
 		checkUserToMove();
 	}
-	
+
 	private void update(boolean thinking) {
 		boardPanel.setFen(engine.getBoard().getFen(), flip, false);
 		fenField.setText(engine.getBoard().getFen());
-//		List<Move> moves = legalMoveGenerator.generateMoves(engine.getBoard());
-//		if (moves.size() == 0) {
-//			System.out.println("End Game");
-//		}
+
 		switch (engine.getBoard().isEndGame()) {
-		case 1 :
-			message.setText("White win");
-			break;
-		case -1:
-			message.setText("Black win");
-			break;
-		case 99:
-			message.setText("Draw");
-			break;
-		default:
-			if (engine.getBoard().getMoveNumber() == 0) message.setText("http://www.mobialia.com");
-			else if (engine.getBoard().getTurn()) message.setText("White move" + (thinking ? " - Thinking..." : ""));
-			else message.setText("Black move" + (thinking ? " - Thinking..." : ""));
+			case 1 :
+				message.setText("White win");
+				break;
+			case -1:
+				message.setText("Black win");
+				break;
+			case 99:
+				message.setText("Draw");
+				break;
+			default:
+				if (engine.getBoard().getMoveNumber() == 0) message.setText("http://www.mobialia.com");
+				else if (engine.getBoard().getTurn()) message.setText("White move" + (thinking ? " - Thinking..." : ""));
+				else message.setText("Black move" + (thinking ? " - Thinking..." : ""));
 		}
 		invalidate();
 		validate();
@@ -258,64 +256,12 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 	}
 
 	public void info(SearchStatusInfo info) {
-		
+		// Implement info logic if needed
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent oAE) {
-		if ("restart".equals(oAE.getActionCommand())) {
-			logger.debug("restart!!!!");
-			boardPanel.unhighlight();
-			userToMove = true; 
-			engine.stop();
-			engine.getBoard().startPosition();
-			checkUserToMove();
-		} else if ("back".equals(oAE.getActionCommand())) {
-			boardPanel.unhighlight();
-			userToMove = true; 
-			engine.stop();
-			logger.debug("undoing move");
-			engine.getBoard().undoMove();
-			update(false);
-		} else if ("pgn".equals(oAE.getActionCommand())) {
-			if (!engine.isSearching()) {
-				int o = comboOpponent.getSelectedIndex();
-				String whiteName = (o == 0 || o == 3 ? "Computer" : "Player");
-				String blackName = (o == 1 || o == 3 ? "Computer" : "Player");
-				pgnDialog.setText(PgnImportExport.getPgn(engine.getBoard(), whiteName, blackName));
-				pgnDialog.setVisible(true);
-			}
-		} else if ("fen".equals(oAE.getActionCommand())) {
-			boardPanel.unhighlight();
-			userToMove = true; 
-			engine.stop();
-			engine.getBoard().setFen(fenField.getText());
-			update(false);
-		} else if ("go".equals(oAE.getActionCommand())) {
-			if (!engine.isSearching()) checkUserToMove();
-		} else if ("opponent".equals(oAE.getActionCommand())) {
-			if (!engine.isSearching()) checkUserToMove();
-		} else if ("time".equals(oAE.getActionCommand())) {
-			searchParameters.setMoveTime(timeValues[comboTime.getSelectedIndex()]);
-		} else if ("elo".equals(oAE.getActionCommand())) {
-			int engineElo = eloValues[comboElo.getSelectedIndex()];
-			logger.debug("Setting elo " + engineElo);
-			engine.getConfig().setLimitStrength(true);
-			engine.getConfig().setElo(engineElo);
-		} else if ("flip".equals(oAE.getActionCommand())) {
-			flip = !flip;
-			boardPanel.unhighlight();
-			boardPanel.setFen(boardPanel.getLastFen(), flip, true);
-		} else if ("pieces".equals(oAE.getActionCommand())) {
-			PieceJLabel.style = piecesValues[comboPieces.getSelectedIndex()];
-			if (boardPanel != null) {
-				boardPanel.setFen(boardPanel.getLastFen(), flip, true);
-			}
-		} else if ("boards".equals(oAE.getActionCommand())) {
-			SquareJPanel.loadImages(this.getClass().getResource(boardsValues[comboBoards.getSelectedIndex()]));
-			if (boardPanel != null) {
-				boardPanel.setFen(boardPanel.getLastFen(), flip, true);
-			}
-		}
+		actionHandler.actionPerformed(oAE);
 	}
 
 	public static void main(String[] args) {
@@ -327,11 +273,11 @@ public class ChessApp extends Panel implements SearchObserver, ActionListener {
 		});
 
 		ChessApp chessApp = new ChessApp();
-		chessApp.setSize(800,610);
+		chessApp.setSize(800, 610);
 		frame.add(chessApp);
 		frame.pack();
 		chessApp.init();
-		frame.setSize(800,610 + 50);
+		frame.setSize(800, 610 + 50);
 		frame.setVisible(true);
 	}
 }

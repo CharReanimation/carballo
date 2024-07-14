@@ -56,9 +56,14 @@ public class ArrayBufferBook implements Book {
 		if (((move >> 12) & 0x7) != 0) sb.append("nbrq".charAt(((move >> 12) & 0x7) - 1));
 		return sb.toString();
 	}
-	
+
 	public void generateMoves(Board board) {
-        int pos = 0;
+		final int KEY_BYTES = 8;
+		final int MOVE_INT_BYTES = 2;
+		final int WEIGHT_BYTES = 2;
+		final int UNUSED_LEARN_FIELD_BYTES = 4;
+
+		int pos = 0;
 		totalWeight = 0;
 		moves.clear();
 		weights.clear();
@@ -66,51 +71,56 @@ public class ArrayBufferBook implements Book {
 		long key2Find = board.getKey();
 
 		try {
-			long key;
-			int moveInt;
-			int weight;
-
 			while (pos < arrayBuffer.length()) {
-				key = ((((long) arrayBuffer.get(pos++)) << 56) | //
-				       (((long) arrayBuffer.get(pos++)) << 48) | //
-                       (((long) arrayBuffer.get(pos++)) << 40) | //
-                       (((long) arrayBuffer.get(pos++)) << 32) | //
-                       (((long) arrayBuffer.get(pos++)) << 24) | //
-                       (((long) arrayBuffer.get(pos++)) << 16) | //
-                       (((long) arrayBuffer.get(pos++)) << 8) | //
-                       ((long) arrayBuffer.get(pos++))); // readLong();
+				long key = readLong(pos);
+				pos += KEY_BYTES;
 
 				if (key == key2Find) {
-					moveInt = (arrayBuffer.get(pos++)  << 8) | arrayBuffer.get(pos++); // readShort();
-					weight = (arrayBuffer.get(pos++)  << 8) | arrayBuffer.get(pos++); // readShort();
-					pos += 4; //readInt(); // Unused learn field
+					int moveInt = readShort(pos);
+					pos += MOVE_INT_BYTES;
+					int weight = readShort(pos);
+					pos += WEIGHT_BYTES + UNUSED_LEARN_FIELD_BYTES;
 
 					int move = Move.getFromString(board, int2MoveString(moveInt), true);
-					// Add only if it is legal
 					if (board.getLegalMove(move) != Move.NONE) {
 						moves.add(move);
 						weights.add(weight);
 						totalWeight += weight;
 					}
 				} else {
-					pos += 8; // skipBytes(8);
+					pos += KEY_BYTES; // skipBytes(KEY_BYTES);
 				}
 			}
-		} catch (Exception ignored) {}
-    }
+		} catch (Exception ignored) {
+		}
+	}
 
-	/**
-	 * Gets a random move from the book taking care of weights
-	 */
+
+	private long readLong(int pos) {
+		return ((((long) arrayBuffer.get(pos)) << 56) |
+				(((long) arrayBuffer.get(pos + 1)) << 48) |
+				(((long) arrayBuffer.get(pos + 2)) << 40) |
+				(((long) arrayBuffer.get(pos + 3)) << 32) |
+				(((long) arrayBuffer.get(pos + 4)) << 24) |
+				(((long) arrayBuffer.get(pos + 5)) << 16) |
+				(((long) arrayBuffer.get(pos + 6)) << 8) |
+				((long) arrayBuffer.get(pos + 7)));
+	}
+
+	private int readShort(int pos) {
+		return (arrayBuffer.get(pos) << 8) | arrayBuffer.get(pos + 1);
+	}
+
 	public int getMove(Board board) {
 		generateMoves(board);
         long randomWeight = Float.valueOf(random.nextFloat() * totalWeight).longValue();
 		for (int i = 0; i < moves.size(); i++) {
 			randomWeight -= weights.get(i);
-			if (randomWeight<=0) {
+			if (randomWeight <= 0) {
 				return moves.get(i);
 			}
 		}
 		return 0;
 	}
+
 }

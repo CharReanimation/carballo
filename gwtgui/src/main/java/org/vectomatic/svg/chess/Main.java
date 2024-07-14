@@ -388,52 +388,105 @@ public class Main implements EntryPoint, SearchObserver, KeyDownHandler, MoveLis
 		nextMove();
 	}
 
+	public static final int KEY_MODE = 113;
+	public static final int KEY_BLUE = 117;
+	public static final int KEY_STOP = 46;
+	public static final int KEY_BACKWARD = 188;
+	public static final int KEY_FORWARD = 190;
+	public static final int KEY_ESCAPE = 27;
+
 	@Override
 	public void onKeyDown(KeyDownEvent event) {
-		switch (event.getNativeKeyCode()) {
+		int keyCode = event.getNativeKeyCode();
+		switch (keyCode) {
 			case KeyCodes.KEY_LEFT:
-				chessboard.left();
+				handleLeftKey();
 				break;
 			case KeyCodes.KEY_UP:
-				chessboard.up();
+				handleUpKey();
 				break;
 			case KeyCodes.KEY_RIGHT:
-				chessboard.right();
+				handleRightKey();
 				break;
 			case KeyCodes.KEY_DOWN:
-				chessboard.down();
+				handleDownKey();
 				break;
 			case KeyCodes.KEY_ENTER:
-				chessboard.enter();
+				handleEnterKey();
 				break;
-			case 113: // MODE
-				int i = modeListBox.getSelectedIndex() + 1;
-				if (i >= modeListBox.getItemCount()) {
-					i = 0;
-				}
-				modeListBox.setSelectedIndex(i);
+			case KEY_MODE:
+				handleModeKey();
 				break;
-			case 117: // BLUE
-				int j = timeListBox.getSelectedIndex() + 1;
-				if (j >= timeListBox.getItemCount()) {
-					j = 0;
-				}
-				timeListBox.setSelectedIndex(j);
+			case KEY_BLUE:
+				handleBlueKey();
 				break;
-			case 46: // STOP
-				restart();
+			case KEY_STOP:
+				handleStopKey();
 				break;
-			case 188: // Backward
-				undo();
+			case KEY_BACKWARD:
+				handleBackwardKey();
 				break;
-			case 190: // forward
-				redo();
+			case KEY_FORWARD:
+				handleForwardKey();
 				break;
-			case 27:
-//			Main.closeBrowser();
+			case KEY_ESCAPE:
+				handleEscapeKey();
 				break;
 		}
 	}
+
+	private void handleLeftKey() {
+		chessboard.left();
+	}
+
+	private void handleRightKey() {
+		chessboard.right();
+	}
+
+	private void handleUpKey() {
+		chessboard.up();
+	}
+
+	private void handleDownKey() {
+		chessboard.down();
+	}
+
+	private void handleEnterKey() {
+		chessboard.enter();
+	}
+
+	private void handleModeKey() {
+		updateListBoxSelection(modeListBox);
+	}
+
+	private void handleBlueKey() {
+		updateListBoxSelection(timeListBox);
+	}
+
+	private void handleStopKey() {
+		restart();
+	}
+
+	private void handleBackwardKey() {
+		undo();
+	}
+
+	private void handleForwardKey() {
+		redo();
+	}
+
+	private void handleEscapeKey() {
+		// Main.closeBrowser();
+	}
+
+	private void updateListBoxSelection(ListBox listBox) {
+		int selectedIndex = listBox.getSelectedIndex() + 1;
+		if (selectedIndex >= listBox.getItemCount()) {
+			selectedIndex = 0;
+		}
+		listBox.setSelectedIndex(selectedIndex);
+	}
+
 
 	@Override
 	public void doMove(int move) {
