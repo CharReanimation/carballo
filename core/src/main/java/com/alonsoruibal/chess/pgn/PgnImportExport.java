@@ -27,75 +27,93 @@ public class PgnImportExport {
 	}
 
 	public static String getPgn(PgnParams params) {
-		return getPgn(params.getBoard(), params.getWhiteName(), params.getBlackName(), params.getEvent(), params.getSite(), params.getResult());
+		return generatePgn(params);
 	}
 
-	private static String getPgn(Board b, String whiteName, String blackName, String event, String site, String result) {
+	private static String generatePgn(PgnParams params) {
 		StringBuilder sb = new StringBuilder();
+		Board board = params.getBoard();
 
-		if (whiteName == null || "".equals(whiteName)) {
-			whiteName = "?";
-		}
-		if (blackName == null || "".equals(blackName)) {
-			blackName = "?";
-		}
+		String whiteName = params.getWhiteName();
+		String blackName = params.getBlackName();
+		String event = params.getEvent();
+		String site = params.getSite();
+		String result = params.getResult();
 
-		if (event == null) {
-			event = "Chess Game";
-		}
-		if (site == null) {
-			site = "-";
-		}
+		whiteName = (whiteName == null || whiteName.isEmpty()) ? "?" : whiteName;
+		blackName = (blackName == null || blackName.isEmpty()) ? "?" : blackName;
+		event = (event == null) ? "Chess Game" : event;
+		site = (site == null) ? "-" : site;
 
-		sb.append("[Event \"").append(event).append("\"]\n");
-		sb.append("[Site \"").append(site).append("\"]\n");
-
-		Date d = new Date();
-		sb.append("[Date \"").append(d.getYear() + 1900).append(".").append(d.getMonth() + 1).append(".").append(d.getDate()).append("\"]\n");
-		sb.append("[Round \"?\"]\n");
-		sb.append("[White \"").append(whiteName).append("\"]\n");
-		sb.append("[Black \"").append(blackName).append("\"]\n");
+		appendTag(sb, "Event", event);
+		appendTag(sb, "Site", site);
+		appendTag(sb, "Date", getCurrentDate());
+		appendTag(sb, "Round", "?");
+		appendTag(sb, "White", whiteName);
+		appendTag(sb, "Black", blackName);
 
 		if (result == null) {
-			result = "*";
-			switch (b.isEndGame()) {
-				case 1:
-					result = "1-0";
-					break;
-				case -1:
-					result = "0-1";
-					break;
-				case 99:
-					result = "1/2-1/2";
-					break;
-			}
+			result = determineResult(board);
 		}
-		sb.append("[Result \"").append(result).append("\"]\n");
+		appendTag(sb, "Result", result);
 
-		if (!Board.FEN_START_POSITION.equals(b.initialFen)) {
-			sb.append("[FEN \"").append(b.initialFen).append("\"]\n");
+		if (!Board.FEN_START_POSITION.equals(board.initialFen)) {
+			appendTag(sb, "FEN", board.initialFen);
 		}
 
-		sb.append("[PlyCount \"").append(b.moveNumber - b.initialMoveNumber).append("\"]\n");
+		appendTag(sb, "PlyCount", String.valueOf(board.moveNumber - board.initialMoveNumber));
 		sb.append("\n");
 
+		sb.append(formatMoves(board, result));
+
+		return sb.toString();
+	}
+
+	private static void appendTag(StringBuilder sb, String tagName, String tagValue) {
+		sb.append(String.format("[%s \"%s\"]\n", tagName, tagValue));
+	}
+
+	private static String getCurrentDate() {
+		Date d = new Date();
+		return String.format("%d.%d.%d", d.getYear() + 1900, d.getMonth() + 1, d.getDate());
+	}
+
+	private static String determineResult(Board board) {
+		String result = "*";
+		switch (board.isEndGame()) {
+			case 1:
+				result = "1-0";
+				break;
+			case -1:
+				result = "0-1";
+				break;
+			case 99:
+				result = "1/2-1/2";
+				break;
+		}
+		return result;
+	}
+
+	private static String formatMoves(Board board, String result) {
 		StringBuilder line = new StringBuilder();
-		for (int i = b.initialMoveNumber; i < b.moveNumber; i++) {
+		for (int i = board.initialMoveNumber; i < board.moveNumber; i++) {
 			line.append(" ");
 			if ((i & 1) == 0) {
-				line.append((i >>> 1) + 1);
-				line.append(". ");
+				line.append((i >>> 1) + 1).append(". ");
 			}
-			line.append(b.getSanMove(i));
+			line.append(board.getSanMove(i));
 		}
+		line.append(" ").append(result);
 
-		line.append(" ");
-		line.append(result);
-		String[] tokens = line.toString().split("[ \\t\\n\\x0B\\f\\r]+");
+		return wrapLine(line.toString(), 80);
+	}
 
+	private static String wrapLine(String line, int lineLength) {
+		String[] tokens = line.split("[ \\t\\n\\x0B\\f\\r]+");
+		StringBuilder sb = new StringBuilder();
 		int length = 0;
 		for (String token : tokens) {
-			if (length + token.length() + 1 > 80) {
+			if (length + token.length() + 1 > lineLength) {
 				sb.append("\n");
 				length = 0;
 			} else if (length > 0) {
@@ -105,7 +123,6 @@ public class PgnImportExport {
 			length += token.length();
 			sb.append(token);
 		}
-
 		return sb.toString();
 	}
 }
