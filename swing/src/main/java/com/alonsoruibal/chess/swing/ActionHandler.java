@@ -1,5 +1,12 @@
 package com.alonsoruibal.chess.swing;
 
+import com.alonsoruibal.chess.log.Logger;
+import com.alonsoruibal.chess.search.SearchEngineThreaded;
+import com.alonsoruibal.chess.search.SearchParameters;
+import com.alonsoruibal.chess.pgn.PgnImportExport;
+import com.alonsoruibal.chess.pgn.PgnParams;
+
+import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,10 +108,14 @@ public class ActionHandler {
             int o = comboOpponent.getSelectedIndex();
             String whiteName = (o == 0 || o == 3 ? "Computer" : "Player");
             String blackName = (o == 1 || o == 3 ? "Computer" : "Player");
-            pgnDialog.setText(PgnImportExport.getPgn(engine.getBoard(), whiteName, blackName));
+
+            // PgnParams getPgn
+            PgnParams params = new PgnParams(engine.getBoard(), whiteName, blackName);
+            pgnDialog.setText(PgnImportExport.getPgn(params));
             pgnDialog.setVisible(true);
         }
     }
+
 
     private void handleFen(ActionEvent oAE) {
         boardPanel.unhighlight();

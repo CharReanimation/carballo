@@ -1,3 +1,7 @@
+package com.alonsoruibal.chess.pgn;
+
+import com.alonsoruibal.chess.Board;
+
 public class PgnParams {
     private Board board;
     private String whiteName;
@@ -7,7 +11,9 @@ public class PgnParams {
     private String result;
 
     public PgnParams(Board board, String whiteName, String blackName) {
-        this(board, whiteName, blackName, null, null, null);
+        this.board = board;
+        this.whiteName = whiteName;
+        this.blackName = blackName;
     }
 
     public PgnParams(Board board, String whiteName, String blackName, String event, String site, String result) {
