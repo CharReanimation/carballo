@@ -26,12 +26,11 @@ public class PgnImportExport {
 		}
 	}
 
-	public static String getPgn(Board b, String whiteName, String blackName) {
-		return getPgn(b, whiteName, blackName, null, null, null);
+	public static String getPgn(PgnParams params) {
+		return getPgn(params.getBoard(), params.getWhiteName(), params.getBlackName(), params.getEvent(), params.getSite(), params.getResult());
 	}
 
-	public static String getPgn(Board b, String whiteName, String blackName, String event, String site, String result) {
-
+	private static String getPgn(Board b, String whiteName, String blackName, String event, String site, String result) {
 		StringBuilder sb = new StringBuilder();
 
 		if (whiteName == null || "".equals(whiteName)) {
@@ -52,11 +51,11 @@ public class PgnImportExport {
 		sb.append("[Site \"").append(site).append("\"]\n");
 
 		Date d = new Date();
-		// For GWT we use deprecated methods
 		sb.append("[Date \"").append(d.getYear() + 1900).append(".").append(d.getMonth() + 1).append(".").append(d.getDate()).append("\"]\n");
 		sb.append("[Round \"?\"]\n");
 		sb.append("[White \"").append(whiteName).append("\"]\n");
 		sb.append("[Black \"").append(blackName).append("\"]\n");
+
 		if (result == null) {
 			result = "*";
 			switch (b.isEndGame()) {
@@ -72,14 +71,15 @@ public class PgnImportExport {
 			}
 		}
 		sb.append("[Result \"").append(result).append("\"]\n");
+
 		if (!Board.FEN_START_POSITION.equals(b.initialFen)) {
 			sb.append("[FEN \"").append(b.initialFen).append("\"]\n");
 		}
+
 		sb.append("[PlyCount \"").append(b.moveNumber - b.initialMoveNumber).append("\"]\n");
 		sb.append("\n");
 
 		StringBuilder line = new StringBuilder();
-
 		for (int i = b.initialMoveNumber; i < b.moveNumber; i++) {
 			line.append(" ");
 			if ((i & 1) == 0) {
@@ -91,7 +91,6 @@ public class PgnImportExport {
 
 		line.append(" ");
 		line.append(result);
-		// Cut line in a limit of 80 characters
 		String[] tokens = line.toString().split("[ \\t\\n\\x0B\\f\\r]+");
 
 		int length = 0;
